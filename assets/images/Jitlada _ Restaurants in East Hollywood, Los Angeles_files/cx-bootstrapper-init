@@ -1,0 +1,815 @@
+var __spreadArray = (this && this.__spreadArray) || function (to, from) {
+    for (var i = 0, il = from.length, j = to.length; i < il; i++, j++)
+        to[j] = from[i];
+    return to;
+};
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+var CXBootstrapper = /** @class */ (function () {
+    function CXBootstrapper(groupId, base, esm6Mod) {
+        var _this = this;
+        var _a, _b;
+        this.identifyAdvertVars = ['_fw_videoAdPlaying'];
+        this.videoAdvertIdentifierNodes = [
+            ['.np_TimerAd', 'display'],
+            ['#ad_countdownvideo-id', 'display'],
+            ['video[title="Advertisement"][src*="http"]', 'paused'],
+            ['#pac', 'display'],
+            ['.jw-vpaid-iframe', 'display'],
+        ];
+        this.isEsm6 = false;
+        this.scriptTagNode = (_a = document.currentScript) !== null && _a !== void 0 ? _a : document.querySelector('script[src*="/cxo/cx-bootstrapper"]');
+        this.continuousLoad = false;
+        this.querySelectorId = null;
+        this.showDebugLogs = false;
+        this.logFunc = (console.log.toString().includes('native code')) ? console.log : (console.info.toString().includes('native code')) ? console.info : null;
+        var rootURL = this.idenfityRootURL();
+        this.showDebugLogs = (rootURL.includes('cxtier') || rootURL.includes('cxLogMode')) ? true : false;
+        if (this.logFunc === null) {
+            this.createLoggingIframe();
+        }
+        this.groupId = groupId;
+        this.isEsm6 = esm6Mod || false;
+        if (typeof this.scriptTagNode === 'undefined' || this.scriptTagNode === null || !this.scriptTagNode.src.includes('/cxo/cx-bootstrapper')) {
+            var invalidScriptSrc = this.scriptTagNode.src;
+            this.scriptTagNode = document.querySelector('script[src*="/cxo/cx-bootstrapper"]');
+            this.debugLog("constructor - Invalid script src: " + invalidScriptSrc + ". Updated to: " + this.scriptTagNode.src, 'debug');
+        }
+        else {
+            this.debugLog("constructor - script src: " + this.scriptTagNode.src, 'debug');
+        }
+        this.baseURL = this.getBaseURL(base);
+        var bootstrapperScripts = document.querySelectorAll('script[src*="/bootstrapper"]');
+        if (bootstrapperScripts.length > 0) {
+            bootstrapperScripts.forEach(function (s) {
+                if ((typeof _this.cxBootstrapperScript === 'undefined' || _this.cxBootstrapperScript === null) && (s.src.includes('catapultx.com') || s.src.includes('qortex.ai') || s.src.includes('localhost'))) {
+                    _this.cxBootstrapperScript = s;
+                }
+            });
+        }
+        var url = (typeof this.scriptTagNode !== 'undefined' && this.scriptTagNode !== null) ? new URL(this.scriptTagNode.src) : new URL('https://tags.qortex.ai');
+        this.continuousLoad = (((_b = this.scriptTagNode.getAttribute('data-continuous-load')) !== null && _b !== void 0 ? _b : url.searchParams.get('continuous-load')) == 'true') ? true : false;
+        this.debugLog('Bootstrapper initialized.', 'selenium');
+        this.iframeBreakout();
+    }
+    CXBootstrapper.prototype.createLoggingIframe = function () {
+        var _this = this;
+        var frame = document.createElement('iframe');
+        frame.setAttribute('style', 'display:none; position:absolute; width:0px; height:0px;');
+        document.body.appendChild(frame);
+        var windowWatch = setInterval(function () {
+            var _a;
+            if (typeof ((_a = frame === null || frame === void 0 ? void 0 : frame.contentWindow) === null || _a === void 0 ? void 0 : _a.console) !== 'undefined') {
+                _this.logFunc = frame.contentWindow.console.log;
+                clearInterval(windowWatch);
+            }
+        }, 10);
+    };
+    CXBootstrapper.prototype.iframeBreakout = function () {
+        if (window.self !== window.top) {
+            var cxb = this.cxBootstrapperScript;
+            var breakout = ((this.scriptTagNode.getAttribute('attach-to-top') !== null) ||
+                (typeof cxb !== 'undefined' && cxb !== null && cxb.src.includes('attach-to-top'))) ? true : false;
+            if (breakout) {
+                var bootstrapperSrc = this.createBootstrapLoaderSrcURL();
+                var cxOverlayReference_1 = document.createElement('script');
+                cxOverlayReference_1.setAttribute('async', '');
+                cxOverlayReference_1.setAttribute('type', 'text/javascript');
+                Array.from(cxb.attributes).forEach(function (attribute) {
+                    cxOverlayReference_1.setAttribute(attribute.nodeName, attribute.nodeValue);
+                });
+                cxOverlayReference_1.setAttribute('src', bootstrapperSrc);
+                try {
+                    window.top.document.head.appendChild(cxOverlayReference_1);
+                    this.debugLog("constructor - Attaching bootstrapper loader script to top window. " + bootstrapperSrc, 'debug');
+                    return true;
+                }
+                catch (err) {
+                    this.debugLog('constructor - Unable to attach bootstrapper loader script to top window.', 'debug');
+                }
+            }
+        }
+        return false;
+    };
+    CXBootstrapper.prototype.createBootstrapLoaderSrcURL = function () {
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j;
+        var bootstrapLoaderUrl = this.getBaseURL() + '/bootstrapper';
+        var url = (typeof this.cxBootstrapperScript !== 'undefined' && this.cxBootstrapperScript !== null) ? new URL(this.cxBootstrapperScript.src) : new URL('https://tags.qortex.ai');
+        var selfScriptNodeAvailable = (typeof this.scriptTagNode !== "undefined" && this.scriptTagNode !== null) ? true : false;
+        var gid = (selfScriptNodeAvailable) ? (_a = this.scriptTagNode.getAttribute('data-group-id')) !== null && _a !== void 0 ? _a : url.searchParams.get('group-id') : url.searchParams.get('group-id');
+        var bid = (selfScriptNodeAvailable) ? (_b = this.scriptTagNode.getAttribute('data-base-id')) !== null && _b !== void 0 ? _b : url.searchParams.get('bid') : url.searchParams.get('bid');
+        var vc = (selfScriptNodeAvailable) ? (_c = this.scriptTagNode.getAttribute('data-video-container')) !== null && _c !== void 0 ? _c : url.searchParams.get('video-container') : url.searchParams.get('video-container');
+        var hc = (selfScriptNodeAvailable) ? (_d = this.scriptTagNode.getAttribute('data-html-container')) !== null && _d !== void 0 ? _d : url.searchParams.get('html-container') : url.searchParams.get('html-container');
+        var mod = (selfScriptNodeAvailable) ? (_e = this.scriptTagNode.getAttribute('data-esm6-mod')) !== null && _e !== void 0 ? _e : url.searchParams.get('esm6-mod') : url.searchParams.get('esm6-mod');
+        var cl = (selfScriptNodeAvailable) ? (_f = this.scriptTagNode.getAttribute('data-continuous-load')) !== null && _f !== void 0 ? _f : url.searchParams.get('continuous-load') : url.searchParams.get('continuous-load');
+        var marketplaceid = (selfScriptNodeAvailable) ? (_g = this.scriptTagNode.getAttribute('data-marketplace-id')) !== null && _g !== void 0 ? _g : url.searchParams.get('marketplace-id') : url.searchParams.get('marketplace-id');
+        var storeid = (selfScriptNodeAvailable) ? (_h = this.scriptTagNode.getAttribute('data-store-id')) !== null && _h !== void 0 ? _h : url.searchParams.get('store-id') : url.searchParams.get('store-id');
+        var bundleid = (selfScriptNodeAvailable) ? (_j = this.scriptTagNode.getAttribute('data-bundle-id')) !== null && _j !== void 0 ? _j : url.searchParams.get('bundle-id') : url.searchParams.get('bundle-id');
+        var urlParams = [];
+        if (gid != null)
+            urlParams.push('group-id=' + gid);
+        if (vc != null)
+            urlParams.push('video-container=' + vc);
+        if (hc != null)
+            urlParams.push('html-container=' + hc);
+        if (mod != null)
+            urlParams.push('esm6-mod=' + mod);
+        if (bid != null)
+            urlParams.push('bid=' + bid);
+        if (cl != null)
+            urlParams.push('continuous-load=' + cl);
+        if (marketplaceid != null)
+            urlParams.push('marketplace-id=' + marketplaceid);
+        if (storeid != null)
+            urlParams.push('store-id=' + storeid);
+        if (bundleid != null)
+            urlParams.push('bundle-id=' + bundleid);
+        bootstrapLoaderUrl = bootstrapLoaderUrl + "?" + urlParams.join('&');
+        return bootstrapLoaderUrl;
+    };
+    CXBootstrapper.prototype.isAndroidWebView = function () {
+        var isAWV = false;
+        if (!navigator.userAgent.includes('AmazonWebAppPlatform')) {
+            if (/(Version\/\d+.*\/\d+.0.0.0 Mobile|; ?wv)/i.test(navigator.userAgent)) {
+                this.debugLog('Android webview navigator detected: ' + navigator.userAgent, 'debug');
+                isAWV = true;
+                // eslint-disable-next-line dot-notation
+            }
+            else if (typeof window['Android'] !== 'undefined') {
+                this.debugLog('Android webview window.Android variable detected.', 'debug');
+                isAWV = true;
+                // eslint-disable-next-line no-prototype-builtins
+            }
+            else if (window.hasOwnProperty('Android ')) {
+                this.debugLog('Android webview window.hasOwnProperty("Android ") detected.', 'debug');
+                isAWV = true;
+            }
+        }
+        return isAWV;
+    };
+    CXBootstrapper.prototype.getBaseURL = function (base) {
+        var _a, _b, _c, _d, _e;
+        var scriptSrc = this.scriptTagNode.src;
+        base !== null && base !== void 0 ? base : (base = scriptSrc.substring(0, scriptSrc.indexOf('/cxo/cx-bootstrapper')));
+        var cxtier;
+        var tierParam;
+        var windowLocation = window.location;
+        if (window.self !== window.top) {
+            this.debugLog('getBaseURL iframe detected.', 'debug');
+            try {
+                if (window.top.location.hostname !== null) {
+                    windowLocation = window.top.location;
+                }
+            }
+            catch (err) {
+                this.debugLog(['getBaseURL error was trapped accessing origin location ', err], 'debug');
+            }
+        }
+        var windowProtocol = windowLocation.protocol;
+        var windowDebugObject = window['cxInjectorWindowDebug'];
+        if (typeof windowDebugObject === 'undefined') {
+            try {
+                windowDebugObject = window.top['cxInjectorWindowDebug'];
+            }
+            catch (err) { }
+        }
+        var windowLocationURL = windowLocation.href;
+        if (windowLocationURL.includes('%')) {
+            windowLocationURL = decodeURI(windowLocationURL);
+            windowLocationURL = (windowLocationURL.includes('%')) ? decodeURIComponent(windowLocationURL) : windowLocationURL;
+        }
+        tierParam = (windowDebugObject === null || windowDebugObject === void 0 ? void 0 : windowDebugObject.cxtier) || ((_c = (_b = (_a = windowLocationURL.substring(windowLocationURL.indexOf('?') + 1).split('&').filter(function (el) { return el.includes('cxtier='); })) === null || _a === void 0 ? void 0 : _a[0]) === null || _b === void 0 ? void 0 : _b.split('=')) === null || _c === void 0 ? void 0 : _c[1]) || null;
+        if (typeof tierParam !== 'undefined' && tierParam !== null) {
+            this.debugLog("querystring cxtier found: " + tierParam, 'debug');
+            cxtier = ((_d = tierParam === null || tierParam === void 0 ? void 0 : tierParam.split('|')) === null || _d === void 0 ? void 0 : _d[0]) || null;
+            var subtier = ((_e = tierParam === null || tierParam === void 0 ? void 0 : tierParam.split('|')) === null || _e === void 0 ? void 0 : _e[1]) || null;
+            switch (cxtier === null || cxtier === void 0 ? void 0 : cxtier.toUpperCase()) {
+                case 'STAGE':
+                    cxtier = windowProtocol + '//stage.qortex.ai';
+                    break;
+                case 'DEV':
+                    cxtier = windowProtocol + '//dev.qortex.ai';
+                    break;
+                case 'LOCAL':
+                    cxtier = (subtier !== null) ? "http://" + subtier + ":3001" : 'http://localhost:3001';
+                    break;
+                default:
+                    this.debugLog("cxtier " + tierParam + " not recognized as valid environment( dev || stage || local )", 'debug');
+                    cxtier = null;
+                    break;
+            }
+        }
+        if (typeof cxtier !== "undefined" && cxtier !== null) {
+            base = cxtier;
+            this.debugLog("constructor cxtier used for --base = " + base, 'debug');
+        }
+        else {
+            if (typeof base === 'undefined' || base === null || base === '') {
+                base = 'https://tags.qortex.ai';
+            }
+            this.debugLog("constructor --base = " + base, 'debug');
+        }
+        return base;
+    };
+    CXBootstrapper.prototype.initCX = function (options) {
+        var _this = this;
+        var _a, _b, _c;
+        var _d;
+        this.options = options;
+        //Anyone using the advanced configuration will still be using 'videoDescriptors' instead of 'containerDescriptors'
+        (_a = (_d = this.options).containerDescriptors) !== null && _a !== void 0 ? _a : (_d.containerDescriptors = this.options.videoDescriptors);
+        (_c = (_b = this.options) === null || _b === void 0 ? void 0 : _b.containerDescriptors) === null || _c === void 0 ? void 0 : _c.forEach(function (containerDescriptor) {
+            var _a, _b;
+            (_a = containerDescriptor.product) !== null && _a !== void 0 ? _a : (containerDescriptor.product = (typeof (containerDescriptor === null || containerDescriptor === void 0 ? void 0 : containerDescriptor.containerIdentifier) !== 'undefined' && containerDescriptor.containerIdentifier !== null) ? 'slideshow' : 'overlay');
+            (_b = containerDescriptor.containerIdentifier) !== null && _b !== void 0 ? _b : (containerDescriptor.containerIdentifier = containerDescriptor.videoElementId);
+            _this.renderCXOverlay(containerDescriptor);
+        });
+    };
+    CXBootstrapper.prototype.renderCXOverlay = function (containerDescriptor) {
+        var _this = this;
+        var _a, _b;
+        var container = (_a = containerDescriptor.videoElement) !== null && _a !== void 0 ? _a : null;
+        (_b = containerDescriptor.product) !== null && _b !== void 0 ? _b : (containerDescriptor.product = 'overlay');
+        var prebidConfig = null;
+        if (typeof containerDescriptor.prebidInventoryAccessConfig !== 'undefined' && containerDescriptor.prebidInventoryAccessConfig !== null) {
+            prebidConfig = containerDescriptor.prebidInventoryAccessConfig;
+        }
+        if (container === null) {
+            if (containerDescriptor.product === 'overlay')
+                this.debugLog('renderCXOverlay --searchingForVideoTag on ' + containerDescriptor.containerIdentifier, 'debug');
+        }
+        else {
+            this.debugLog('renderCXOverlay --videoElement provided: ' + String(containerDescriptor.videoElement), 'debug');
+            containerDescriptor.containerIdentifier = 'cx-video-direct';
+            container.classList.add(containerDescriptor.containerIdentifier);
+            this.querySelectorId = "." + containerDescriptor.containerIdentifier;
+        }
+        var findContainerAttempts = 0;
+        var playerRenderCheck = setInterval(function () {
+            var _a;
+            if (findContainerAttempts >= 100 && !_this.continuousLoad) {
+                _this.debugLog('renderCXOverlay timeout. No video source found.', 'debug');
+                clearInterval(playerRenderCheck);
+            }
+            container = (_a = _this.findHTMLContainer(container, containerDescriptor)) !== null && _a !== void 0 ? _a : null;
+            if (containerDescriptor.product === 'overlay') {
+                var videoTag = _this.findVideoNode(container, containerDescriptor);
+                if (videoTag === null) {
+                    //If no video is found in the video container we will look through each iframe and attempt to attach our bootstrapper code with the same params
+                    if (typeof container !== 'undefined' && container !== null) {
+                        _this.findVideoInIframes(container);
+                        videoTag = _this.findVideoInShadow(container);
+                    }
+                    if (videoTag !== null) {
+                        var videoParent = videoTag;
+                        var videoShadowRoot = videoTag.getRootNode();
+                        for (var i = 0; i < videoShadowRoot.childNodes.length; i++) {
+                            if (videoShadowRoot.childNodes[i].nodeType === 1 && videoShadowRoot.childNodes[i].contains(videoTag)) {
+                                videoParent = videoShadowRoot.childNodes[i];
+                                break;
+                            }
+                        }
+                        videoParent.classList.add('cx-shadow-root');
+                        _this.querySelectorId = '.cx-shadow-root';
+                    }
+                }
+                var videoSource = _this.getVideoSource(videoTag);
+                var videoSourceFound = (videoSource !== null && videoSource.length > 0) ? true : false;
+                if (videoSourceFound) {
+                    if (!_this.isVideoAdvertisement(container, videoTag)) {
+                        _this.debugLog('renderCXOverlay', 'debug');
+                        if (!_this.continuousLoad) {
+                            clearInterval(playerRenderCheck);
+                        }
+                        _this.attachCXOverlay(containerDescriptor, container, videoTag, prebidConfig);
+                    }
+                    else {
+                        _this.debugLog('renderCXOverlay --foundTagSrc --isAdvert', 'debug');
+                        _this.debugLog('Video identified as advertisement.', 'selenium');
+                    }
+                }
+            }
+            else if (containerDescriptor.product === 'slideshow') {
+                if (container !== null) {
+                    _this.debugLog('renderCXSlideshow', 'debug');
+                    if (!_this.continuousLoad) {
+                        clearInterval(playerRenderCheck);
+                    }
+                    _this.attachCXSlideshow(containerDescriptor, container, prebidConfig);
+                }
+            }
+            findContainerAttempts++;
+        }, 1000);
+    };
+    CXBootstrapper.prototype.findHTMLContainer = function (container, containerDescriptor) {
+        var _this = this;
+        var _a, _b, _c, _d, _e, _f;
+        var foundContainer = container;
+        if (typeof containerDescriptor.videoElement === 'undefined' || containerDescriptor.videoElement === null) {
+            foundContainer = null;
+            this.querySelectorId = null;
+        }
+        if (containerDescriptor.containerIdentifier.includes('%%')) {
+            var wildcardID_1 = containerDescriptor.containerIdentifier.substring(0, containerDescriptor.containerIdentifier.indexOf('%%'));
+            foundContainer !== null && foundContainer !== void 0 ? foundContainer : (foundContainer = document.querySelector("[id*=" + wildcardID_1 + "]:not([cx-id])"));
+            if (typeof foundContainer === 'undefined' || foundContainer === null) {
+                foundContainer !== null && foundContainer !== void 0 ? foundContainer : (foundContainer = document.querySelector("[class*=" + wildcardID_1 + "]:not([cx-id])"));
+                if (foundContainer !== null) {
+                    foundContainer.classList.forEach(function (clsName) {
+                        _this.debugLog("Checking " + clsName + " for " + wildcardID_1 + ".", 'debug');
+                        if (clsName.includes(wildcardID_1)) {
+                            _this.querySelectorId = '.' + clsName;
+                        }
+                    });
+                }
+            }
+            else {
+                (_a = this.querySelectorId) !== null && _a !== void 0 ? _a : (this.querySelectorId = (foundContainer !== null) ? '#' + foundContainer.id : null);
+            }
+        }
+        else {
+            try {
+                foundContainer !== null && foundContainer !== void 0 ? foundContainer : (foundContainer = document.querySelector(containerDescriptor.containerIdentifier + ":not([cx-id])"));
+                (_b = this.querySelectorId) !== null && _b !== void 0 ? _b : (this.querySelectorId = (foundContainer !== null) ? containerDescriptor.containerIdentifier : null);
+            }
+            catch (err) {
+                this.debugLog("querySelector " + containerDescriptor.containerIdentifier + ":not([cx-id]) is invalid", 'debug');
+            }
+            if (((_c = containerDescriptor === null || containerDescriptor === void 0 ? void 0 : containerDescriptor.containerIdentifier) === null || _c === void 0 ? void 0 : _c.indexOf('#')) === 0 || ((_d = containerDescriptor === null || containerDescriptor === void 0 ? void 0 : containerDescriptor.containerIdentifier) === null || _d === void 0 ? void 0 : _d.indexOf('.')) === 0) {
+                this.debugLog("querySelector for publisher defined id or class '" + containerDescriptor.containerIdentifier + ":not([cx-id])' not found", 'debug');
+            }
+            else {
+                try {
+                    foundContainer !== null && foundContainer !== void 0 ? foundContainer : (foundContainer = document.querySelector("#" + containerDescriptor.containerIdentifier + ":not([cx-id])"));
+                    (_e = this.querySelectorId) !== null && _e !== void 0 ? _e : (this.querySelectorId = (foundContainer !== null) ? '#' + containerDescriptor.containerIdentifier : null);
+                }
+                catch (err) {
+                    this.debugLog("querySelector " + containerDescriptor.containerIdentifier + ":not([cx-id]) is invalid", 'debug');
+                }
+                if (typeof (foundContainer === null || foundContainer === void 0 ? void 0 : foundContainer.tagName) === 'undefined' || ['SCRIPT', 'LINK', 'BR'].includes(foundContainer.tagName.toUpperCase())) {
+                    foundContainer = null;
+                    this.querySelectorId = null;
+                }
+                ;
+                try {
+                    foundContainer !== null && foundContainer !== void 0 ? foundContainer : (foundContainer = document.querySelector("." + containerDescriptor.containerIdentifier + ":not([cx-id])"));
+                    (_f = this.querySelectorId) !== null && _f !== void 0 ? _f : (this.querySelectorId = (foundContainer !== null) ? '.' + containerDescriptor.containerIdentifier : null);
+                }
+                catch (err) {
+                    this.debugLog("querySelector " + containerDescriptor.containerIdentifier + ":not([cx-id]) is invalid", 'debug');
+                }
+            }
+        }
+        return foundContainer;
+    };
+    CXBootstrapper.prototype.findVideoNode = function (videoContainer, videoDescriptor) {
+        var videoNode = null;
+        if (videoContainer !== undefined && videoContainer !== null) {
+            this.debugLog("renderCXOverlay --videoContainerFound with identifier '" + videoDescriptor.containerIdentifier + "' (" + this.querySelectorId + ") as node type '" + videoContainer.tagName + "'", 'debug');
+            if (videoContainer.matches('iframe')) {
+                this.debugLog('renderCXOverlay --iframe', 'debug');
+                var src = videoContainer.getAttribute('src');
+                if (src.includes('youtube.com/embed/')) {
+                    this.debugLog('renderCXOverlay --playerType = youtube', 'debug');
+                    videoDescriptor.playerType = 'YOUTUBE';
+                }
+            }
+            else {
+                videoNode = (videoContainer.matches('video')) ? videoContainer : this.findVideoElement(videoContainer);
+            }
+        }
+        return videoNode;
+    };
+    CXBootstrapper.prototype.getVideoSource = function (vid) {
+        var _a, _b;
+        var vidSrc = null;
+        if (typeof vid !== 'undefined' && vid !== null) {
+            vidSrc = (_a = vid.src) !== null && _a !== void 0 ? _a : null;
+            if (vidSrc === null || vidSrc === '') {
+                var sourceNodes = vid.getElementsByTagName('source');
+                for (var i = 0; i < sourceNodes.length; i++) {
+                    vidSrc = (_b = sourceNodes[i].src) !== null && _b !== void 0 ? _b : null;
+                    if (vidSrc !== null && vidSrc !== '') {
+                        break;
+                    }
+                }
+            }
+            if (vidSrc === null) {
+                this.debugLog('getVideoSource -- no source found on video node.', 'debug');
+            }
+        }
+        return vidSrc;
+    };
+    CXBootstrapper.prototype.isVideoAdvertisement = function (videoContainer, videoTag) {
+        var isAdvertisement = false;
+        for (var i = 0; i < this.identifyAdvertVars.length; i++) {
+            if (typeof videoTag[this.identifyAdvertVars[i]] !== 'undefined' && videoTag[this.identifyAdvertVars[i]] !== null && videoTag[this.identifyAdvertVars[i]] !== false) {
+                this.debugLog('isAdvert: ' + videoTag[this.identifyAdvertVars[i]], 'debug');
+                isAdvertisement = true;
+                break;
+            }
+        }
+        for (var i = 0; i < this.videoAdvertIdentifierNodes.length; i++) {
+            var foundAdvertElement = videoContainer.querySelector(this.videoAdvertIdentifierNodes[i][0]);
+            if (foundAdvertElement !== null) {
+                if (typeof this.videoAdvertIdentifierNodes[i][1] !== 'undefined' && this.videoAdvertIdentifierNodes[i][1] != null) {
+                    if (this.videoAdvertIdentifierNodes[i][1] === 'display') {
+                        if (window.getComputedStyle(foundAdvertElement).getPropertyValue('display').toLowerCase() !== 'none') {
+                            isAdvertisement = true;
+                        }
+                    }
+                    else if (this.videoAdvertIdentifierNodes[i][1] === 'paused') {
+                        if (!foundAdvertElement.paused) {
+                            isAdvertisement = true;
+                        }
+                    }
+                }
+                else {
+                    isAdvertisement = true;
+                }
+                if (isAdvertisement) {
+                    this.debugLog("Current video identified as advertisement through node: " + this.videoAdvertIdentifierNodes[i][0], 'debug');
+                    break;
+                }
+            }
+        }
+        return isAdvertisement;
+    };
+    CXBootstrapper.prototype.findVideoInIframes = function (videoContainer) {
+        var _this = this;
+        var iframeList = videoContainer.querySelectorAll('iframe');
+        iframeList.forEach(function (frame) {
+            try {
+                if (typeof frame['cxappend'] === 'undefined' || frame['cxappend'] === null) {
+                    var videoNodes = frame.contentDocument.querySelectorAll('video');
+                    if (videoNodes.length > 0) {
+                        frame['cxappend'] = 'true';
+                        var frameBody = frame.contentDocument.querySelector('body');
+                        frameBody.classList.add('cxroot');
+                        var bootstrapperSrc = _this.createBootstrapLoaderSrcURL();
+                        bootstrapperSrc = (_this.getBaseURL() + '/bootstrapper?' + bootstrapperSrc.split('?')[1].split('&').map(function (params) {
+                            if (params.includes('video-container')) {
+                                params = params.split('=')[0] + '=cxroot';
+                            }
+                            return params;
+                        }).join('&'));
+                        var cxBootstrapperClone = document.createElement('script');
+                        cxBootstrapperClone.setAttribute('async', '');
+                        cxBootstrapperClone.setAttribute('type', 'text/javascript');
+                        cxBootstrapperClone.setAttribute('src', bootstrapperSrc);
+                        frame.contentDocument.head.appendChild(cxBootstrapperClone);
+                        _this.debugLog('renderCXOverlay - Adding bootstrapper to video iframe. ' + frame.outerHTML, 'debug');
+                    }
+                }
+            }
+            catch (err) {
+                _this.debugLog('unable to access video iframe: ' + frame.outerHTML, 'debug');
+                frame['cxappend'] = 'false';
+            }
+        });
+    };
+    CXBootstrapper.prototype.findVideoInShadow = function (videoContainer, depth) {
+        var _this = this;
+        var _a, _b;
+        if (depth === void 0) { depth = 1; }
+        var foundVideo = null;
+        var shadowRoot = (_a = videoContainer === null || videoContainer === void 0 ? void 0 : videoContainer.shadowRoot) !== null && _a !== void 0 ? _a : null;
+        if (shadowRoot !== null) {
+            this.debugLog(["Checking for video on shadow tree " + ((_b = videoContainer.outerHTML) === null || _b === void 0 ? void 0 : _b.substring(0, 50)), shadowRoot], 'debug');
+            foundVideo = this.findVideoElement(shadowRoot);
+        }
+        var searchChildNodes = function (searchContainer) {
+            var _a, _b;
+            if (searchContainer !== null && foundVideo === null) {
+                for (var i in searchContainer.childNodes) {
+                    if (searchContainer.childNodes[i].nodeType === 1) {
+                        _this.debugLog(["Checking for video in container " + ((_a = searchContainer.childNodes[i].outerHTML) === null || _a === void 0 ? void 0 : _a.substring(0, 50))], 'debug');
+                        foundVideo = _this.findVideoInShadow(searchContainer.childNodes[i], depth + 1);
+                        if (foundVideo !== null) {
+                            _this.debugLog(["Video has been found in SHADOW DOM container depth " + depth + " :: " + ((_b = searchContainer.childNodes[i].outerHTML) === null || _b === void 0 ? void 0 : _b.substring(0, 50)), foundVideo], 'debug');
+                            break;
+                        }
+                    }
+                }
+            }
+        };
+        searchChildNodes(shadowRoot);
+        searchChildNodes(videoContainer);
+        return foundVideo;
+    };
+    CXBootstrapper.prototype.attachCXOverlay = function (containerDescriptor, videoContainer, videoTag, osdConfig) {
+        var _a, _b;
+        if (videoTag.cxInitialized != null) {
+            var videoRootDocument = (_a = videoTag.getRootNode().ownerDocument) !== null && _a !== void 0 ? _a : document;
+            var createdOverlay = videoRootDocument === null || videoRootDocument === void 0 ? void 0 : videoRootDocument.querySelector("cx-overlay[q-element-id*='" + containerDescriptor.containerIdentifier + "']");
+            this.debugLog(["renderCXOverlay  --foundTagSrc --overlay already attached to video " + containerDescriptor.containerIdentifier + ". Will not re-initialize.", createdOverlay], 'debug');
+            if (typeof osdConfig !== 'undefined' && osdConfig !== null) {
+                if (typeof createdOverlay !== 'undefined' && createdOverlay !== null) {
+                    var parametersEvent = new CustomEvent('cx-external-event', {
+                        bubbles: false,
+                        detail: {
+                            type: 'update-prebid-params',
+                            osdConfig: osdConfig
+                        }
+                    });
+                    this.debugLog(["Dispatching updated parameters to cx-overlay.", parametersEvent], 'debug');
+                    createdOverlay.dispatchEvent(parametersEvent);
+                }
+            }
+            //} else if (this.isAndroidWebView()){
+            //  this.debugLog(`renderCXOverlay  --foundTagSrc --is android web view device ${videoDescriptor.containerIdentifier}. Will not initialize.`, 'debug')
+        }
+        else {
+            var videoRootDocument = (_b = videoTag.getRootNode().ownerDocument) !== null && _b !== void 0 ? _b : document;
+            this.debugLog("renderCXOverlay  --Does cx-overlay script exist in the same document as the video? " + videoRootDocument.contains(this.scriptTagNode), 'debug');
+            var scriptName = (this.isEsm6) ? 'cx-overlay.esm.js' : 'cx-overlay.js';
+            var cxOverlayUrl = this.baseURL + "/cxo/" + scriptName;
+            var cxOverlayScript = videoRootDocument.querySelector("script[src=\"" + cxOverlayUrl + "\"]");
+            if (typeof cxOverlayScript === 'undefined' || cxOverlayScript === null) {
+                cxOverlayScript = document.createElement('script');
+                cxOverlayScript.setAttribute('async', '');
+                cxOverlayScript.setAttribute('type', (scriptName.includes('esm') ? 'module' : 'text/javascript'));
+                cxOverlayScript.setAttribute('src', cxOverlayUrl);
+            }
+            videoRootDocument.head.appendChild(cxOverlayScript);
+            var cxTag = document.createElement('cx-overlay');
+            this.RenderCXTag(cxTag, containerDescriptor, videoTag, videoContainer, osdConfig);
+            this.debugLog('renderCXOverlay -- CX-Overlay initialized.', 'debug');
+            this.debugLog('CX-Overlay initialized.', 'selenium');
+        }
+    };
+    CXBootstrapper.prototype.attachCXSlideshow = function (containerDescriptor, container, osdConfig) {
+        var _a;
+        var containerRootDocument = (_a = container.getRootNode().ownerDocument) !== null && _a !== void 0 ? _a : document;
+        if (container.cxInitialized != null) {
+            var createdOverlay = containerRootDocument === null || containerRootDocument === void 0 ? void 0 : containerRootDocument.querySelector("cx-overlay[q-element-id*='" + containerDescriptor.containerIdentifier + "']");
+            this.debugLog(["renderCXOverlay  --foundTagSrc --overlay already attached to element " + containerDescriptor.containerIdentifier + ". Will not re-initialize.", createdOverlay], 'debug');
+            if (typeof osdConfig !== 'undefined' && osdConfig !== null) {
+                if (typeof createdOverlay !== 'undefined' && createdOverlay !== null) {
+                    var parametersEvent = new CustomEvent('cx-external-event', {
+                        bubbles: false,
+                        detail: {
+                            type: 'update-prebid-params',
+                            osdConfig: osdConfig
+                        }
+                    });
+                    this.debugLog(["Dispatching updated parameters to cx-slideshow.", parametersEvent], 'debug');
+                    createdOverlay.dispatchEvent(parametersEvent);
+                }
+            }
+        }
+        else {
+            this.debugLog("renderCXOverlay  --Does cx-overlay script exist in the same document as the html element? " + containerRootDocument.contains(this.scriptTagNode), 'debug');
+            var scriptName = (this.isEsm6) ? 'cx-slideshow.esm.js' : 'cx-slideshow.js';
+            var cxSlideshowUrl = this.baseURL + "/cxo/" + scriptName;
+            var cxSlideshowScript = containerRootDocument.querySelector("script[src=\"" + cxSlideshowUrl + "\"]");
+            if (typeof cxSlideshowScript === 'undefined' || cxSlideshowScript === null) {
+                cxSlideshowScript = document.createElement('script');
+                cxSlideshowScript.setAttribute('async', '');
+                cxSlideshowScript.setAttribute('type', (scriptName.includes('esm') ? 'module' : 'text/javascript'));
+                cxSlideshowScript.setAttribute('src', cxSlideshowUrl);
+            }
+            containerRootDocument.head.appendChild(cxSlideshowScript);
+            var cxTag = document.createElement('cx-slideshow');
+            this.RenderCXTag(cxTag, containerDescriptor, null, container, osdConfig);
+            this.debugLog('renderCXSlideshow -- CX-Slideshow initialized.', 'debug');
+            this.debugLog('CX-Slideshow initialized.', 'selenium');
+        }
+    };
+    Object.defineProperty(CXBootstrapper.prototype, "generateUniqueId", {
+        get: function () {
+            var ts = Math.round(+new Date() / 1000.0);
+            var rand;
+            try {
+                var uu32 = new Uint32Array(1);
+                rand = crypto.getRandomValues(uu32)[0];
+            }
+            catch (e) {
+                rand = Math.round(Math.random() * 2147483647);
+            }
+            return "CX" + rand + "X" + ts;
+        },
+        enumerable: false,
+        configurable: true
+    });
+    CXBootstrapper.prototype.findVideoElement = function (node) {
+        var cnode = null;
+        var videoNodes = node.querySelectorAll('video');
+        if (videoNodes.length > 1) {
+            for (var n = 0; n < videoNodes.length; n++) {
+                if (!this.isAdNode(node, videoNodes[n])) {
+                    cnode = videoNodes[n];
+                    break;
+                }
+            }
+            if (cnode === null) {
+                cnode = videoNodes[0];
+            }
+        }
+        else if (videoNodes.length === 1) {
+            cnode = videoNodes[0];
+        }
+        if (cnode !== null) {
+            this.debugLog(['findVideoElement -- <video> node found in videoContainer', cnode], 'debug');
+        }
+        else {
+            this.debugLog('findVideoElement -- no <video> node found in videoContainer', 'debug');
+        }
+        return cnode;
+    };
+    CXBootstrapper.prototype.isAdNode = function (topNode, currentNode) {
+        var isAd = false;
+        if (currentNode !== null && topNode !== currentNode) {
+            if (((currentNode === null || currentNode === void 0 ? void 0 : currentNode.id) != null && (currentNode.id.toLowerCase().includes('_ad') || currentNode.id.toLowerCase().includes('-ad'))) ||
+                ((currentNode === null || currentNode === void 0 ? void 0 : currentNode.className) != null && (currentNode.className.toLowerCase().includes('-ad') || currentNode.className.toLowerCase().includes('_ad')))) {
+                isAd = true;
+            }
+            else {
+                isAd = this.isAdNode(topNode, currentNode.parentElement);
+            }
+        }
+        return isAd;
+    };
+    CXBootstrapper.prototype.RenderCXTag = function (cxTag, containerDescriptor, videoElement, container, osdConfig) {
+        if (videoElement === void 0) { videoElement = null; }
+        cxTag.setAttribute('group-id', this.groupId);
+        cxTag.setAttribute('isesm', this.isEsm6);
+        if (typeof containerDescriptor.marketplaceId !== 'undefined' && containerDescriptor.marketplaceId !== null) {
+            cxTag.setAttribute('marketplace-id', containerDescriptor.marketplaceId);
+        }
+        if (typeof containerDescriptor.storeId !== 'undefined' && containerDescriptor.storeId !== null) {
+            cxTag.setAttribute('store-id', containerDescriptor.storeId);
+        }
+        if (typeof containerDescriptor.bundleId !== 'undefined' && containerDescriptor.bundleId !== null) {
+            cxTag.setAttribute('bundle-id', containerDescriptor.bundleId);
+        }
+        if (typeof containerDescriptor.containerIdentifier !== 'undefined' && containerDescriptor.containerIdentifier !== null) {
+            var selectorId = this.querySelectorId;
+            if (this.continuousLoad) {
+                var uniqueQID = this.generateUniqueId;
+                container.setAttribute('cx-id', uniqueQID);
+                cxTag.setAttribute('q-element-id', selectorId + "[cx-id='" + uniqueQID + "']");
+            }
+            else {
+                cxTag.setAttribute('q-element-id', selectorId);
+            }
+        }
+        if (osdConfig != null) {
+            cxTag.osdConfig = osdConfig;
+        }
+        if (videoElement != null) {
+            videoElement.cxInitialized = true;
+            cxTag.foundVideoNode = videoElement;
+            cxTag.identifyAdvertVars = this.identifyAdvertVars;
+            container.appendChild(cxTag);
+        }
+        else {
+            container.cxInitialized = true;
+            cxTag.foundHTMLNode = container;
+            container.parentElement.appendChild(cxTag);
+        }
+    };
+    CXBootstrapper.prototype.debugLog = function (l, type) {
+        var _this = this;
+        if (type === void 0) { type = 'boot'; }
+        if (this.logFunc !== null) {
+            var logArr = typeof l === 'string' ? [l] : __spreadArray([], l);
+            logArr[0] = "cxb." + logArr[0];
+            if (type === 'boot') {
+                this.logFunc.apply(this, __spreadArray(["%cCX%cLOGS." + this.groupId + "%cBOOT%c%s", 'padding: 1px 4px; border-radius: 3px; display: inline-block; background-color: #ffb700; color:rgba(255,255,255,1); font-weight:bold;',
+                    'font-size:0; color:rgba(255,255,255,0); background-color:rgba(255,255,255,0);',
+                    'background-color: #0d47a1; color: #FFF; padding: 1px 4px; border-radius: 3px; display: inline-block; font-weight:bold;',
+                    'padding: 1px 4px; border-radius: 3px; display: inline-block; background-color: initial; color:initial; font-weight:normal;',
+                    logArr.splice(0, 1)[0]], logArr));
+            }
+            else if (this.showDebugLogs) {
+                if (type === 'selenium') {
+                    this.logFunc.apply(this, __spreadArray(['%cCX%cSELENIUM%c%s',
+                        'padding: 1px 4px; border-radius: 3px; display: inline-block; background-color: #ffb700; color:rgba(255,255,255,1); font-weight:bold;',
+                        'background-color: rgba(0,0,0, 1); color: rgba(255,255,255, .75); padding: 1px 4px; border-radius: 3px; display: inline-block; font-weight:bold;',
+                        'padding: 1px 4px; border-radius: 3px; display: inline-block; background-color: initial; color:initial; font-weight:normal;',
+                        logArr.splice(0, 1)[0]], logArr));
+                }
+                else {
+                    this.logFunc.apply(this, __spreadArray(['%cCX%cLOGS%cBOOT_DEBUG%c%s',
+                        'padding: 1px 4px; border-radius: 3px; display: inline-block; background-color: #ffb700; color:rgba(255,255,255,1); font-weight:bold;',
+                        'font-size:0; color:rgba(255,255,255,0); background-color:rgba(255,255,255,0);',
+                        'background-color: #0d47a1; color: #FFF; padding: 1px 4px; border-radius: 3px; display: inline-block; font-weight:bold;',
+                        'padding: 1px 4px; border-radius: 3px; display: inline-block; background-color: initial; color:initial; font-weight:normal;',
+                        logArr.splice(0, 1)[0]], logArr));
+                }
+            }
+        }
+        else {
+            setTimeout(function () { _this.debugLog(l, type); }, 50);
+        }
+    };
+    CXBootstrapper.prototype.idenfityRootURL = function () {
+        var windowURL = window.location.href;
+        if (window.self !== window.top) {
+            try {
+                windowURL = window.top.location.href;
+            }
+            catch (err) {
+                this.debugLog(['Unable to determine iframe document referrer at bootstrap loader ', err], 'error');
+            }
+        }
+        return windowURL;
+    };
+    return CXBootstrapper;
+}());
+;
+(function selfLoader() {
+    //console.log('%c cxb.selfLoading current executing script: ' + document.currentScript.outerHTML, 'background-color: #0d47a1; color: #FFF')
+    var debugLog = function (l) {
+        var logArr = (!Array.isArray(l)) ? [l] : __spreadArray([], l);
+        console.log.apply(console, __spreadArray(['%cCX%cBOOT%c%s',
+            'padding: 1px 4px; border-radius: 3px; display: inline-block; background-color: #ffb700; color:rgba(255,255,255,1); font-weight:bold;',
+            'background-color: #0d47a1; color: #FFF; padding: 1px 4px; border-radius: 3px; display: inline-block; font-weight:bold;',
+            'padding: 1px 4px; border-radius: 3px; display: inline-block; background-color: initial; color:initial; font-weight:normal;'], logArr));
+    };
+    var cxBootstrapperInitScript = document.currentScript;
+    var bootstrapperScripts = document.querySelectorAll('script[src*="/bootstrapper"]');
+    var cxBootstrapperScript;
+    if (bootstrapperScripts.length > 0) {
+        bootstrapperScripts.forEach(function (s) {
+            if ((typeof cxBootstrapperScript === 'undefined' || cxBootstrapperScript === null) && (s.src.includes('catapultx.com') || s.src.includes('qortex.ai') || s.src.includes('localhost'))) {
+                cxBootstrapperScript = s;
+            }
+        });
+    }
+    if ((typeof cxBootstrapperScript !== 'undefined' && cxBootstrapperScript !== null)) {
+        var cxBootstrapperParams = cxBootstrapperScript.src.split('?');
+        if (cxBootstrapperInitScript.getAttribute('data-video-container') != null || cxBootstrapperInitScript.getAttribute('data-html-container') != null || cxBootstrapperInitScript.getAttribute('data-group-id') != null) {
+            var ds = cxBootstrapperInitScript.dataset;
+            var attributes = [];
+            for (var param in ds) {
+                attributes.push("" + ds[param]);
+            }
+            debugLog("cxb.selfLoading with attributes: " + String(attributes));
+            selfLoadCXB();
+        }
+        else if (cxBootstrapperParams.length > 1 && (cxBootstrapperParams[1].includes('group-id') && (cxBootstrapperParams[1].includes('html-container') || cxBootstrapperParams[1].includes('video-container')))) {
+            var paramsString_1 = '';
+            cxBootstrapperParams[1].split('&').forEach(function (p) { if (p.split('=').length > 0)
+                paramsString_1 += (paramsString_1.length > 0) ? ',' + p.split('=')[1] : p.split('=')[1]; });
+            debugLog('cxb.selfLoading with url params: ' + paramsString_1);
+            selfLoadCXB();
+        }
+        else {
+            debugLog('cxb.selfloader - no params with boostrapper loader. Will not attempt self load.');
+        }
+    }
+    else {
+        debugLog('cxb.selfloader - no bootstrapper loader script found. attempting to call selfload');
+        selfLoadCXB();
+    }
+    function selfLoadCXB() {
+        var url = (typeof cxBootstrapperScript !== 'undefined' && cxBootstrapperScript !== null) ? new URL(cxBootstrapperScript.src) : new URL('https://tags.qortex.ai');
+        var selfScriptNodeAvailable = (typeof cxBootstrapperInitScript !== "undefined" && cxBootstrapperInitScript !== null) ? true : false;
+        var gid = (selfScriptNodeAvailable) ? cxBootstrapperInitScript.getAttribute('data-group-id') || url.searchParams.get('group-id') : url.searchParams.get('group-id');
+        var bid = (selfScriptNodeAvailable) ? cxBootstrapperInitScript.getAttribute('data-base-id') || url.searchParams.get('bid') : url.searchParams.get('bid');
+        var vc = (selfScriptNodeAvailable) ? cxBootstrapperInitScript.getAttribute('data-video-container') || url.searchParams.get('video-container') : url.searchParams.get('video-container');
+        var hc = (selfScriptNodeAvailable) ? cxBootstrapperInitScript.getAttribute('data-html-container') || url.searchParams.get('html-container') : url.searchParams.get('html-container');
+        var mod = (selfScriptNodeAvailable) ? cxBootstrapperInitScript.getAttribute('data-esm6-mod') || url.searchParams.get('esm6-mod') : url.searchParams.get('esm6-mod');
+        var marketplaceid = (selfScriptNodeAvailable) ? cxBootstrapperInitScript.getAttribute('data-marketplace-id') || url.searchParams.get('marketplace-id') : url.searchParams.get('marketplace-id');
+        var storeid = (selfScriptNodeAvailable) ? cxBootstrapperInitScript.getAttribute('data-store-id') || url.searchParams.get('store-id') : url.searchParams.get('store-id');
+        var bundleid = (selfScriptNodeAvailable) ? cxBootstrapperInitScript.getAttribute('data-bundle-id') || url.searchParams.get('bundle-id') : url.searchParams.get('bundle-id');
+        if ((typeof vc !== 'undefined' && vc !== null) || (typeof hc !== 'undefined' && hc !== null)) {
+            var isEsm6Mod = Boolean(typeof mod !== 'undefined' && mod !== null && mod.toLowerCase() === 'true');
+            var cxbc = new CXBootstrapper(gid, bid, isEsm6Mod);
+            var video_containers = vc === null || vc === void 0 ? void 0 : vc.split('|');
+            var html_containers = hc === null || hc === void 0 ? void 0 : hc.split('|');
+            var containerDescriptorEntries_1 = [];
+            video_containers === null || video_containers === void 0 ? void 0 : video_containers.forEach(function (containerId) {
+                var descriptor = {
+                    product: 'overlay',
+                    containerIdentifier: containerId
+                };
+                if (marketplaceid !== null)
+                    descriptor.marketplaceId = marketplaceid;
+                if (storeid !== null)
+                    descriptor.storeId = storeid;
+                if (bundleid !== null)
+                    descriptor.bundleId = bundleid;
+                containerDescriptorEntries_1.push(descriptor);
+            });
+            html_containers === null || html_containers === void 0 ? void 0 : html_containers.forEach(function (containerId) {
+                var descriptor = {
+                    product: 'slideshow',
+                    containerIdentifier: containerId
+                };
+                if (marketplaceid !== null)
+                    descriptor.marketplaceId = marketplaceid;
+                if (storeid !== null)
+                    descriptor.storeId = storeid;
+                if (bundleid !== null)
+                    descriptor.bundleId = bundleid;
+                containerDescriptorEntries_1.push(descriptor);
+            });
+            cxbc.initCX({ containerDescriptors: containerDescriptorEntries_1 });
+        }
+        else {
+            debugLog('cxb.selfLoadCXB - missing required parameters to execute cx selfload (video-container identifier).');
+        }
+    }
+})();
