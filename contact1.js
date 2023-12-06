@@ -2,6 +2,7 @@ const firebaseConfig = {
     apiKey: "AIzaSyA583UoRsjh62Y_sEBCV4xa4jcfH7sIYFM",
     authDomain: "travel-wise-b7d29.firebaseapp.com",
     projectId: "travel-wise-b7d29",
+    databaseURL: "https://travel-wise-b7d29-default-rtdb.firebaseio.com/",
     storageBucket: "travel-wise-b7d29.appspot.com",
     messagingSenderId: "406298994217",
     appId: "1:406298994217:web:9e436bb16a3d76fd0f9e38"
