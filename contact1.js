@@ -23,7 +23,6 @@ function send(){
         name: name: ,
         email: email,
         subject: subject,
-        message: message
-
+        message: message,
     });
 }
