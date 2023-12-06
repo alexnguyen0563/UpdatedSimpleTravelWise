@@ -1,0 +1,13 @@
+{
+"userdetails": [{
+    "fullname": "jondoe",   
+    "email": "jondoe@gmail.com",
+    "subject": "test1",
+    "message": "hey"
+}, {
+    "fullname": "janedoe",   
+    "email": "janedoe@gmail.com",
+    "subject": "test2",
+    "message": "hi"
+}]
+}
