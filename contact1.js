@@ -20,7 +20,7 @@ function send(){
     var message = document.getElementById("message").value;
 
     detailsRef.push().set({
-        name: name: ,
+        name: name,
         email: email,
         subject: subject,
         message: message,
