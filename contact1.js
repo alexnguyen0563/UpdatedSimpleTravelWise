@@ -1,12 +1,11 @@
 const firebaseConfig = {
-    apiKey: "AIzaSyA583UoRsjh62Y_sEBCV4xa4jcfH7sIYFM",
-    authDomain: "travel-wise-b7d29.firebaseapp.com",
-    projectId: "travel-wise-b7d29",
-    databaseURL: "https://travel-wise-b7d29-default-rtdb.firebaseio.com/",
-    storageBucket: "travel-wise-b7d29.appspot.com",
-    messagingSenderId: "406298994217",
-    appId: "1:406298994217:web:9e436bb16a3d76fd0f9e38"
-  };
+  apiKey: "AIzaSyDrZDW_Li-VuLD7Ir2e6uuBcxFf_vuZ1p8",
+  authDomain: "tvla-c3f4d.firebaseapp.com",
+  projectId: "tvla-c3f4d",
+  storageBucket: "tvla-c3f4d.appspot.com",
+  messagingSenderId: "548945238419",
+  appId: "1:548945238419:web:27261d51388504c3ab7066"
+};
 const app = firebase.initializeApp(firebaseConfig);
 const dbRef = firebase.database().ref();
 
